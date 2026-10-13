@@ -1,0 +1,19 @@
+{
+  "weights": {
+    "critical_defects": 30,
+    "failed_tests": 20,
+    "coverage": 20,
+    "requirement_risk": 30
+  },
+  "thresholds": {
+    "low_max": 30,
+    "medium_max": 60
+  },
+  "scoring": {
+    "critical_defects_for_max": 2,
+    "high_defect_equivalent": 0.35,
+    "failed_test_rate_for_max": 0.2,
+    "coverage_gap_for_max": 0.4,
+    "critical_untested_penalty_ratio": 0.15
+  }
+}

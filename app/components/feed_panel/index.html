@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #0f172a;
+  }
+  #panel {
+    display: flex;
+    flex-direction: column;
+    height: 340px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    overflow: hidden;
+  }
+  #list {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    align-content: start;
+    padding: 12px 12px 8px;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+  }
+  .row.off { background: #f8fafc; }
+  .row.needed { border-color: #fecaca; background: #fffafa; }
+  .icon { width: 22px; text-align: center; font-size: 16px; }
+  .meta { flex: 1; min-width: 0; }
+  .line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .name { font-size: 13px; font-weight: 700; }
+  .tag, .req, .state {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: 999px;
+    padding: 2px 6px;
+  }
+  .tag { color: #64748b; background: #f1f5f9; }
+  .req { color: #9f1239; background: #fff1f2; }
+  .state.on { color: #047857; background: #ecfdf5; }
+  .state.off { color: #64748b; background: #f1f5f9; }
+  .sub { margin-top: 4px; font-size: 11px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .secret {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: #f8fafc;
+    border-radius: 5px;
+    padding: 1px 5px;
+  }
+  .switch { position: relative; width: 38px; height: 22px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .knob {
+    position: absolute; inset: 0; cursor: pointer;
+    background: #cbd5e1; border-radius: 999px; transition: 0.15s;
+  }
+  .knob:before {
+    content: ""; position: absolute; width: 16px; height: 16px;
+    left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.15s;
+  }
+  input:checked + .knob { background: #111827; }
+  input:checked + .knob:before { transform: translateX(16px); }
+  #grip {
+    flex: 0 0 18px;
+    cursor: ns-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+    user-select: none;
+    touch-action: none;
+  }
+  #grip i {
+    width: 46px; height: 4px; border-radius: 99px; background: #cbd5e1;
+  }
+  #grip:hover i, #grip.dragging i { background: #64748b; }
+</style>
+</head>
+<body>
+<div id="panel">
+  <div id="list"></div>
+  <div id="grip" title="Drag to resize"><i></i></div>
+</div>
+<script>
+  function post(type, data) {
+    window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*");
+  }
+  const Streamlit = {
+    setComponentReady: function () { post("streamlit:componentReady", { apiVersion: 1 }); },
+    setFrameHeight: function (height) { post("streamlit:setFrameHeight", { height: height }); },
+    setComponentValue: function (value) {
+      post("streamlit:setComponentValue", { value: value, dataType: "json" });
+    }
+  };
+
+  let items = [];
+  let height = 340;
+  let revision = 0;
+  let dragging = false;
+
+  function clamp(value) { return Math.max(220, Math.min(680, Math.round(value))); }
+
+  function applyHeight() {
+    document.getElementById("panel").style.height = height + "px";
+    Streamlit.setFrameHeight(height + 2);
+  }
+
+  function emit() {
+    const enabled = {};
+    items.forEach(function (item) { enabled[item.id] = !!item.on; });
+    Streamlit.setComponentValue({ height: height, enabled: enabled, revision: revision });
+  }
+
+  function render() {
+    const list = document.getElementById("list");
+    list.textContent = "";
+    items.forEach(function (item) {
+      const row = document.createElement("div");
+      row.className = "row" + (item.on ? "" : " off") + (!item.on && item.required ? " needed" : "");
+
+      const icon = document.createElement("div");
+      icon.className = "icon";
+      icon.textContent = item.icon || "";
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      const line = document.createElement("div");
+      line.className = "line";
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = item.name;
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = item.kind || "";
+      line.appendChild(name);
+      line.appendChild(tag);
+      if (item.required) {
+        const req = document.createElement("span");
+        req.className = "req";
+        req.textContent = "Required";
+        line.appendChild(req);
+      }
+      const state = document.createElement("span");
+      state.className = "state " + (item.on ? "on" : "off");
+      state.textContent = item.on ? "Linked" : "Off";
+      line.appendChild(state);
+
+      const sub = document.createElement("div");
+      sub.className = "sub";
+      const secret = document.createElement("span");
+      secret.className = "secret";
+      secret.textContent = item.secret || "";
+      sub.appendChild(secret);
+      sub.appendChild(document.createTextNode("  " + (item.telemetry || "")));
+      meta.appendChild(line);
+      meta.appendChild(sub);
+
+      const label = document.createElement("label");
+      label.className = "switch";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.checked = !!item.on;
+      input.setAttribute("aria-label", "Link " + item.name);
+      input.addEventListener("change", function () {
+        item.on = input.checked;
+        render();
+        emit();
+      });
+      const knob = document.createElement("span");
+      knob.className = "knob";
+      label.appendChild(input);
+      label.appendChild(knob);
+
+      row.appendChild(icon);
+      row.appendChild(meta);
+      row.appendChild(label);
+      list.appendChild(row);
+    });
+  }
+
+  const grip = document.getElementById("grip");
+  let startY = 0;
+  let startH = 0;
+  grip.addEventListener("pointerdown", function (event) {
+    dragging = true;
+    startY = event.clientY;
+    startH = height;
+    grip.classList.add("dragging");
+    grip.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  });
+  grip.addEventListener("pointermove", function (event) {
+    if (!dragging) return;
+    height = clamp(startH + (event.clientY - startY));
+    applyHeight();
+  });
+  function endDrag() {
+    if (!dragging) return;
+    dragging = false;
+    grip.classList.remove("dragging");
+    emit();
+  }
+  grip.addEventListener("pointerup", endDrag);
+  grip.addEventListener("pointercancel", endDrag);
+
+  window.addEventListener("message", function (event) {
+    if (!event.data || event.data.type !== "streamlit:render") return;
+    const args = event.data.args || {};
+    items = (args.items || []).map(function (item) { return Object.assign({}, item); });
+    revision = args.revision || 0;
+    if (!dragging) height = clamp(args.height || 340);
+    render();
+    applyHeight();
+  });
+
+  Streamlit.setComponentReady();
+  applyHeight();
+</script>
+</body>
+</html>

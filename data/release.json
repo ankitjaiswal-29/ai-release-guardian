@@ -1,0 +1,71 @@
+{
+  "release": "ABC-5.4",
+  "target_date": "2026-10-22",
+  "owner": "ABC Corp Release Team",
+  "stories": [
+    {
+      "id": "ABC-101",
+      "title": "Improve payment timeout handling",
+      "description": "Retry eligible card payments after a gateway timeout.",
+      "acceptance_criteria": ["Successful payment completes", "Timeout is retried once", "Duplicate charges are prevented", "Retry audit event is recorded"],
+      "component": "Payment",
+      "priority": "Critical",
+      "dependencies": ["Authentication", "Payment Gateway"]
+    },
+    {
+      "id": "ABC-102",
+      "title": "Step-up authentication",
+      "description": "Require an additional challenge for high-risk transactions.",
+      "acceptance_criteria": ["Challenge is displayed", "Failed challenge blocks payment"],
+      "component": "Authentication",
+      "priority": "Critical",
+      "dependencies": ["Payment"]
+    },
+    {
+      "id": "ABC-103",
+      "title": "New receipt layout",
+      "description": "Show transaction and order details in the receipt.",
+      "acceptance_criteria": ["Receipt is accessible", "Transaction details are correct"],
+      "component": "Receipt",
+      "priority": "Medium",
+      "dependencies": []
+    },
+    {
+      "id": "ABC-104",
+      "title": "Payment telemetry",
+      "description": "Add operational metrics for gateway latency.",
+      "acceptance_criteria": ["Latency metric is emitted"],
+      "component": "Payment",
+      "priority": "High",
+      "dependencies": ["Observability"]
+    }
+  ],
+  "wdio_results": [
+    {"id": "TC-201", "story_id": "ABC-101", "scenario": "Successful payment", "status": "PASS", "automation": "Automated", "execution_time_seconds": 12, "critical": true},
+    {"id": "TC-202", "story_id": "ABC-101", "scenario": "Payment timeout retry", "status": "FAIL", "automation": "Automated", "execution_time_seconds": 15, "critical": true, "error_message": "Expected one retry after timeout, but no retry request was observed"},
+    {"id": "TC-203", "story_id": "ABC-101", "scenario": "Duplicate charge prevention", "status": "NOT_RUN", "automation": "Manual", "execution_time_seconds": 0, "critical": true},
+    {"id": "TC-204", "story_id": "ABC-102", "scenario": "Challenge displayed", "status": "PASS", "automation": "Automated", "execution_time_seconds": 8, "critical": true},
+    {"id": "TC-205", "story_id": "ABC-102", "scenario": "Failed challenge blocks payment", "status": "FAIL", "automation": "Automated", "execution_time_seconds": 9, "critical": true, "error_message": "Payment stayed enabled after the authentication challenge failed"},
+    {"id": "TC-206", "story_id": "ABC-102", "scenario": "Challenge service unavailable", "status": "NOT_RUN", "automation": "Manual", "execution_time_seconds": 0, "critical": true},
+    {"id": "TC-207", "story_id": "ABC-103", "scenario": "Accessible receipt", "status": "PASS", "automation": "Automated", "execution_time_seconds": 5, "critical": false},
+    {"id": "TC-208", "story_id": "ABC-103", "scenario": "Correct transaction details", "status": "PASS", "automation": "Automated", "execution_time_seconds": 4, "critical": false},
+    {"id": "TC-209", "story_id": "ABC-104", "scenario": "Latency metric emitted", "status": "PASS", "automation": "Automated", "execution_time_seconds": 3, "critical": false},
+    {"id": "TC-210", "story_id": "ABC-101", "scenario": "Gateway recovery", "status": "FAIL", "automation": "Automated", "execution_time_seconds": 18, "critical": true, "error_message": "Payment did not recover after the gateway became available"},
+    {"id": "TC-211", "story_id": "ABC-101", "scenario": "Unsupported card", "status": "PASS", "automation": "Automated", "execution_time_seconds": 7, "critical": false},
+    {"id": "TC-212", "story_id": "ABC-101", "scenario": "Expired card", "status": "PASS", "automation": "Automated", "execution_time_seconds": 7, "critical": false},
+    {"id": "TC-213", "story_id": "ABC-102", "scenario": "Successful challenge", "status": "PASS", "automation": "Automated", "execution_time_seconds": 8, "critical": false},
+    {"id": "TC-214", "story_id": "ABC-102", "scenario": "Challenge timeout", "status": "FAIL", "automation": "Automated", "execution_time_seconds": 22, "critical": true, "error_message": "WDIO waitUntil timed out while waiting for the challenge fallback"},
+    {"id": "TC-215", "story_id": "ABC-103", "scenario": "Mobile receipt", "status": "PASS", "automation": "Automated", "execution_time_seconds": 5, "critical": false},
+    {"id": "TC-216", "story_id": "ABC-103", "scenario": "Receipt print", "status": "PASS", "automation": "Manual", "execution_time_seconds": 10, "critical": false},
+    {"id": "TC-217", "story_id": "ABC-104", "scenario": "Metric dimensions", "status": "PASS", "automation": "Automated", "execution_time_seconds": 3, "critical": false},
+    {"id": "TC-218", "story_id": "ABC-104", "scenario": "Telemetry failure", "status": "PASS", "automation": "Automated", "execution_time_seconds": 3, "critical": false},
+    {"id": "TC-219", "story_id": "ABC-101", "scenario": "Slow gateway response", "status": "PASS", "automation": "Automated", "execution_time_seconds": 20, "critical": false},
+    {"id": "TC-220", "story_id": "ABC-102", "scenario": "Remember trusted device", "status": "NOT_RUN", "automation": "Manual", "execution_time_seconds": 0, "critical": false}
+  ],
+  "defects": [
+    {"id": "DEF-102", "story_id": "ABC-101", "severity": "Critical", "status": "Open", "component": "Payment", "description": "Retry can submit a duplicate charge"},
+    {"id": "DEF-108", "story_id": "ABC-102", "severity": "Critical", "status": "Open", "component": "Authentication", "description": "Challenge timeout leaves payment blocked"},
+    {"id": "DEF-111", "story_id": "ABC-101", "severity": "High", "status": "In Progress", "component": "Payment", "description": "Gateway error text is misleading"},
+    {"id": "DEF-115", "story_id": "ABC-103", "severity": "Medium", "status": "Resolved", "component": "Receipt", "description": "Receipt wraps on small screens"}
+  ]
+}
